@@ -1,0 +1,19 @@
+{
+  "name": "@haykmkrtich/react-native-patriot-native",
+  "version": "1.0.1",
+  "main": "index.ts",
+  "files": [
+    "index.ts",
+    "android/"
+  ],
+  "keywords": ["react-native", "wearos", "watchface"],
+  "author": "Hayk Mkrtich",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/haykmkrtich/react-native-patriot-native"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
