@@ -1,6 +1,6 @@
 {
   "name": "@haykmkrtich/react-native-patriot-native",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "main": "index.ts",
   "files": [
     "index.ts",
