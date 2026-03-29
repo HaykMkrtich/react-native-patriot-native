@@ -32,7 +32,7 @@ yarn add @haykmkrtich/react-native-patriot-native
 
 ## Requirements
 
-- React Native >= 0.60.0
+- React Native >= 0.77.0
 - Android API level 24+ (Android 7.0+)
 - Java 17+
 - Paired WearOS device

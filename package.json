@@ -26,7 +26,7 @@
     "access": "public"
   },
   "peerDependencies": {
-    "react-native": ">=0.60.0"
+    "react-native": ">=0.77.0"
   },
   "engines": {
     "node": ">=16.0.0"

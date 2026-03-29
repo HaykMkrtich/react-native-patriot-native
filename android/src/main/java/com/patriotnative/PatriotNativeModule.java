@@ -20,6 +20,7 @@ import com.google.android.gms.wearable.Wearable;
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
 
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 
@@ -58,8 +59,8 @@ public class PatriotNativeModule extends NativePatriotNativeSpec {
             Context context = getContext();
 
             NodeClient nodeClient = Wearable.getNodeClient(context);
-            Task<Set<Node>> nodesTask = nodeClient.getConnectedNodes();
-            Set<Node> nodes = Tasks.await(nodesTask);
+            Task<List<Node>> nodesTask = nodeClient.getConnectedNodes();
+            List<Node> nodes = Tasks.await(nodesTask);
 
             if (nodes.isEmpty()) {
                 promise.reject("NO_NODES", "No connected WearOS devices found");
@@ -106,8 +107,8 @@ public class PatriotNativeModule extends NativePatriotNativeSpec {
             Context context = getContext();
 
             NodeClient nodeClient = Wearable.getNodeClient(context);
-            Task<Set<Node>> nodesTask = nodeClient.getConnectedNodes();
-            Set<Node> nodes = Tasks.await(nodesTask);
+            Task<List<Node>> nodesTask = nodeClient.getConnectedNodes();
+            List<Node> nodes = Tasks.await(nodesTask);
 
             CapabilityClient capabilityClient = Wearable.getCapabilityClient(context);
 

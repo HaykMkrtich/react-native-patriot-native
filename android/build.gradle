@@ -30,15 +30,6 @@ android {
         }
     }
 
-    sourceSets {
-        main {
-            if (project.hasProperty("newArchEnabled") && project.property("newArchEnabled") == "true") {
-                java.srcDirs += ["src/newarch/java"]
-            } else {
-                java.srcDirs += ["src/oldarch/java"]
-            }
-        }
-    }
 }
 
 react {

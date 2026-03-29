@@ -1,22 +1,14 @@
-import { NativeModules, Platform } from 'react-native';
+import { Platform } from 'react-native';
+import NativePatriotNative from './src/NativePatriotNative';
 
-// Import TurboModule spec for RN 0.77+ compatibility
-let PatriotNativeModule: any;
-
-try {
-  // Try to use TurboModule first (RN 0.77+)
-  PatriotNativeModule = require('./src/NativePatriotNative').default;
-} catch (e) {
-  // Fallback to legacy NativeModules (RN < 0.77)
-  PatriotNativeModule = NativeModules.PatriotNative;
-}
+const PatriotNativeModule = NativePatriotNative;
 
 if (!PatriotNativeModule) {
   throw new Error(
       `PatriotNative module is not properly linked. Please check your installation:
     1. Run 'npx react-native clean' and rebuild
     2. Ensure Android dependencies are properly installed
-    3. Check that your React Native version is 0.60+`
+    3. Check that your React Native version is 0.77+`
   );
 }
 
@@ -74,7 +66,6 @@ export const sendMessageToWatch = (nodeId: string, path: string, data: string = 
   return PatriotNativeModule.sendMessageToWatch(nodeId, path, data);
 };
 
-// Backward compatibility
 /** @deprecated Use getConnectedDevices() instead. Returns the first device or { isDisconnected: true }. */
 export const getConnectedWatchProperties = async (): Promise<ConnectedDevice & { isDisconnected?: boolean }> => {
   const devices = await getConnectedDevices();
