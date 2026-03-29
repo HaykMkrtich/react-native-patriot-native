@@ -1,13 +1,20 @@
 {
   "name": "@haykmkrtich/react-native-patriot-native",
-  "version": "1.0.7",
+  "version": "1.1.0",
   "main": "index.ts",
   "files": [
     "index.ts",
     "src/",
     "android/"
   ],
-  "keywords": ["react-native", "wearos", "watchface", "16kb-pages", "rn-0.77", "turbomodule"],
+  "keywords": [
+    "react-native",
+    "wearos",
+    "watchface",
+    "16kb-pages",
+    "rn-0.77",
+    "turbomodule"
+  ],
   "author": "Hayk Mkrtich",
   "license": "MIT",
   "repository": {
