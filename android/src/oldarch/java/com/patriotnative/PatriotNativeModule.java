@@ -5,12 +5,13 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 
+import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.Promise;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
 import com.facebook.react.bridge.ReactMethod;
+import com.facebook.react.bridge.WritableArray;
 import com.facebook.react.bridge.WritableMap;
-import com.facebook.react.bridge.WritableNativeMap;
 
 import com.google.android.gms.wearable.CapabilityClient;
 import com.google.android.gms.wearable.CapabilityInfo;
@@ -43,17 +44,21 @@ public class PatriotNativeModule extends ReactContextBaseJavaModule {
         return NAME;
     }
 
+    private Context getContext() {
+        Context context = getCurrentActivity();
+        if (context == null) {
+            context = getReactApplicationContext();
+        }
+        return context;
+    }
+
     @ReactMethod
     public void installWatchface(String packageName, Promise promise) {
         try {
-            Context context = getCurrentActivity();
-            if (context == null) {
-                context = getReactApplicationContext();
-            }
+            Context context = getContext();
 
             NodeClient nodeClient = Wearable.getNodeClient(context);
             Task<Set<Node>> nodesTask = nodeClient.getConnectedNodes();
-
             Set<Node> nodes = Tasks.await(nodesTask);
 
             if (nodes.isEmpty()) {
@@ -95,53 +100,99 @@ public class PatriotNativeModule extends ReactContextBaseJavaModule {
     }
 
     @ReactMethod
-    public void getConnectedWatchProperties(Promise promise) {
+    public void getConnectedDevices(Promise promise) {
         try {
-            Context context = getCurrentActivity();
-            if (context == null) {
-                context = getReactApplicationContext();
-            }
+            Context context = getContext();
 
             NodeClient nodeClient = Wearable.getNodeClient(context);
             Task<Set<Node>> nodesTask = nodeClient.getConnectedNodes();
-
             Set<Node> nodes = Tasks.await(nodesTask);
 
-            if (nodes.isEmpty()) {
-                WritableMap result = new WritableNativeMap();
-                result.putBoolean("isDisconnected", true);
-                promise.resolve(result);
-                return;
+            CapabilityClient capabilityClient = Wearable.getCapabilityClient(context);
+
+            WritableArray devicesArray = Arguments.createArray();
+
+            for (Node node : nodes) {
+                WritableMap deviceMap = Arguments.createMap();
+                deviceMap.putString("id", node.getId());
+                deviceMap.putString("displayName", node.getDisplayName());
+                deviceMap.putBoolean("isNearby", node.isNearby());
+                deviceMap.putString("type", "watch");
+
+                try {
+                    Task<CapabilityInfo> capabilityTask = capabilityClient.getCapability(
+                            "wear_app_runtime", CapabilityClient.FILTER_REACHABLE);
+                    CapabilityInfo capabilityInfo = Tasks.await(capabilityTask);
+
+                    boolean isWearOS = false;
+                    for (Node capableNode : capabilityInfo.getNodes()) {
+                        if (capableNode.getId().equals(node.getId())) {
+                            isWearOS = true;
+                            break;
+                        }
+                    }
+                    deviceMap.putString("platform", isWearOS ? "wearOS" : "unknown");
+                } catch (Exception e) {
+                    deviceMap.putString("platform", "wearOS");
+                }
+
+                devicesArray.pushMap(deviceMap);
             }
 
-            Node firstNode = nodes.iterator().next();
+            promise.resolve(devicesArray);
 
-            WritableMap result = new WritableNativeMap();
-            result.putString("id", firstNode.getId());
-            result.putString("displayName", firstNode.getDisplayName());
-            result.putBoolean("isNearby", firstNode.isNearby());
-            result.putString("type", "watch");
+        } catch (ExecutionException | InterruptedException e) {
+            promise.reject("DETECTION_FAILED", "Failed to get connected devices: " + e.getMessage());
+        } catch (Exception e) {
+            promise.reject("DETECTION_FAILED", "Unexpected error: " + e.getMessage());
+        }
+    }
+
+    @ReactMethod
+    public void isAppInstalledOnWatch(String packageName, Promise promise) {
+        try {
+            Context context = getContext();
 
             CapabilityClient capabilityClient = Wearable.getCapabilityClient(context);
-            try {
-                Task<CapabilityInfo> capabilityTask = capabilityClient.getCapability("wear_app_runtime", CapabilityClient.FILTER_REACHABLE);
-                CapabilityInfo capabilityInfo = Tasks.await(capabilityTask);
+            Task<CapabilityInfo> capabilityTask = capabilityClient.getCapability(
+                    packageName, CapabilityClient.FILTER_ALL);
+            CapabilityInfo capabilityInfo = Tasks.await(capabilityTask);
 
-                if (capabilityInfo.getNodes().size() > 0) {
-                    result.putString("platform", "wearOS");
-                } else {
-                    result.putString("platform", "unknown");
-                }
-            } catch (Exception e) {
-                result.putString("platform", "wearOS");
+            Set<Node> capableNodes = capabilityInfo.getNodes();
+
+            WritableMap result = Arguments.createMap();
+            result.putBoolean("isInstalled", !capableNodes.isEmpty());
+
+            WritableArray nodeIds = Arguments.createArray();
+            for (Node node : capableNodes) {
+                nodeIds.pushString(node.getId());
             }
+            result.putArray("installedOnNodes", nodeIds);
 
             promise.resolve(result);
 
         } catch (ExecutionException | InterruptedException e) {
-            promise.reject("DETECTION_FAILED", "Failed to detect connected devices: " + e.getMessage());
+            promise.reject("CHECK_FAILED", "Failed to check app installation: " + e.getMessage());
         } catch (Exception e) {
-            promise.reject("DETECTION_FAILED", "Unexpected error: " + e.getMessage());
+            promise.reject("CHECK_FAILED", "Unexpected error: " + e.getMessage());
+        }
+    }
+
+    @ReactMethod
+    public void sendMessageToWatch(String nodeId, String path, String data, Promise promise) {
+        try {
+            Context context = getContext();
+
+            Task<Integer> sendTask = Wearable.getMessageClient(context)
+                    .sendMessage(nodeId, path, data.getBytes());
+            Tasks.await(sendTask);
+
+            promise.resolve(null);
+
+        } catch (ExecutionException | InterruptedException e) {
+            promise.reject("MESSAGE_FAILED", "Failed to send message: " + e.getMessage());
+        } catch (Exception e) {
+            promise.reject("MESSAGE_FAILED", "Unexpected error: " + e.getMessage());
         }
     }
 }

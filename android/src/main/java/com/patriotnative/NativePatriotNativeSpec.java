@@ -35,5 +35,13 @@ public abstract class NativePatriotNativeSpec extends ReactContextBaseJavaModule
 
   @ReactMethod
   @DoNotStrip
-  public abstract void getConnectedWatchProperties(Promise promise);
+  public abstract void getConnectedDevices(Promise promise);
+
+  @ReactMethod
+  @DoNotStrip
+  public abstract void isAppInstalledOnWatch(String packageName, Promise promise);
+
+  @ReactMethod
+  @DoNotStrip
+  public abstract void sendMessageToWatch(String nodeId, String path, String data, Promise promise);
 }

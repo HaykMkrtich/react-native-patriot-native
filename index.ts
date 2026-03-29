@@ -20,16 +20,22 @@ if (!PatriotNativeModule) {
   );
 }
 
-// Type definitions for better TypeScript support
-export interface WatchProperties {
+export interface ConnectedDevice {
   id: string;
   displayName: string;
   isNearby: boolean;
   type: string;
   platform: string;
-  isDisconnected?: boolean;
 }
 
+export interface AppInstallStatus {
+  isInstalled: boolean;
+  installedOnNodes: string[];
+}
+
+/**
+ * Install a watch face on connected WearOS devices.
+ */
 export const installWatchface = (packageName: string): Promise<void> => {
   if (Platform.OS !== 'android') {
     return Promise.reject(new Error('PatriotNative is only supported on Android'));
@@ -37,9 +43,43 @@ export const installWatchface = (packageName: string): Promise<void> => {
   return PatriotNativeModule.installWatchface(packageName);
 };
 
-export const getConnectedWatchProperties = (): Promise<WatchProperties> => {
+/**
+ * Get all connected WearOS devices with full details (id, name, proximity, type, platform).
+ * Returns an empty array if no devices are connected.
+ */
+export const getConnectedDevices = (): Promise<ConnectedDevice[]> => {
   if (Platform.OS !== 'android') {
     return Promise.reject(new Error('PatriotNative is only supported on Android'));
   }
-  return PatriotNativeModule.getConnectedWatchProperties();
+  return PatriotNativeModule.getConnectedDevices();
+};
+
+/**
+ * Check if a specific app/capability is installed on connected watches.
+ */
+export const isAppInstalledOnWatch = (packageName: string): Promise<AppInstallStatus> => {
+  if (Platform.OS !== 'android') {
+    return Promise.reject(new Error('PatriotNative is only supported on Android'));
+  }
+  return PatriotNativeModule.isAppInstalledOnWatch(packageName);
+};
+
+/**
+ * Send a custom message to a specific watch node.
+ */
+export const sendMessageToWatch = (nodeId: string, path: string, data: string = ''): Promise<void> => {
+  if (Platform.OS !== 'android') {
+    return Promise.reject(new Error('PatriotNative is only supported on Android'));
+  }
+  return PatriotNativeModule.sendMessageToWatch(nodeId, path, data);
+};
+
+// Backward compatibility
+/** @deprecated Use getConnectedDevices() instead. Returns the first device or { isDisconnected: true }. */
+export const getConnectedWatchProperties = async (): Promise<ConnectedDevice & { isDisconnected?: boolean }> => {
+  const devices = await getConnectedDevices();
+  if (devices.length === 0) {
+    return { isDisconnected: true } as any;
+  }
+  return devices[0];
 };

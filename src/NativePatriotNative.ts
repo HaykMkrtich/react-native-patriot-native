@@ -6,18 +6,11 @@
 import type { TurboModule } from 'react-native';
 import { TurboModuleRegistry } from 'react-native';
 
-export interface WatchProperties {
-    id: string;
-    displayName: string;
-    isNearby: boolean;
-    type: string;
-    platform: string;
-    isDisconnected?: boolean;
-}
-
 export interface Spec extends TurboModule {
     installWatchface(packageName: string): Promise<void>;
-    getConnectedWatchProperties(): Promise<WatchProperties>;
+    getConnectedDevices(): Promise<Object>;
+    isAppInstalledOnWatch(packageName: string): Promise<Object>;
+    sendMessageToWatch(nodeId: string, path: string, data: string): Promise<void>;
 }
 
 export default TurboModuleRegistry.getEnforcing<Spec>('PatriotNative');
