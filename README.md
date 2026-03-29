@@ -4,201 +4,214 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Platform](https://img.shields.io/badge/platform-react--native-lightgrey)](https://reactnative.dev/)
 
-> 🚀 Seamlessly install WearOS watch faces and retrieve device information directly from your React Native mobile application.
+A React Native module that enables seamless interaction with WearOS devices — install watch faces, detect connected devices, check app installations, and send messages directly from your mobile app.
 
-## ✨ What's New in v1.0.5
-
-- 🔍 **Device Detection**: New `getConnectedWatchProperties()` function
-- 📱 **Multi-Platform Support**: Detect WearOS, Fitbit, and other wearable devices
-- 🏷️ **Device Information**: Get name, platform, type, and unique ID
-- 🛡️ **Enhanced Error Handling**: Improved disconnection detection
-
-## 🚀 Quick Start
-
-```bash
-npm install @haykmkrtich/react-native-patriot-native
-```
-
-```typescript
-import { installWatchface, getConnectedWatchProperties } from '@haykmkrtich/react-native-patriot-native';
-
-// Install watchface
-await installWatchface('com.example.watchface.package');
-
-// Get device info
-const watch = await getConnectedWatchProperties();
-console.log(`Connected: ${watch.displayName} (${watch.platform})`);
-```
-
-## 📋 Requirements
-
-- ⚛️ React Native ≥ 0.60.0
-- 🤖 Android API level 21+ (Android 5.0+)
-- ⌚ Paired WearOS device
-
-## 🎯 Features
+## Features
 
 | Feature | Description |
 |---------|-------------|
-| 📦 **Watch Face Installation** | Install watch faces directly on paired WearOS devices |
-| 🔍 **Device Detection** | Retrieve detailed information about connected devices |
-| 🏷️ **Platform Detection** | Identify WearOS, Fitbit, and other wearable platforms |
-| 📡 **Connection Status** | Monitor device connectivity and proximity |
-| 🔄 **Promise-based API** | Modern async/await support |
-| 💬 **Native Feedback** | Toast notifications for user feedback |
+| **Watch Face Installation** | Install watch faces directly on paired WearOS devices |
+| **Device Detection** | Get detailed info on all connected WearOS devices |
+| **Platform Detection** | Identify WearOS vs other wearable platforms |
+| **App Install Check** | Verify if a specific app is installed on the watch |
+| **Custom Messaging** | Send arbitrary messages to specific watch nodes |
+| **New Architecture** | TurboModule support for React Native 0.77+ |
+| **16KB Page Size** | Compliant with Google Play's 16KB page size requirements |
 
-## 📖 API Reference
+## Installation
 
-### `installWatchface(packageName: string)`
+```bash
+npm install @haykmkrtich/react-native-patriot-native
+# or
+yarn add @haykmkrtich/react-native-patriot-native
+```
 
-Initiates watch face installation on connected WearOS device.
+## Requirements
 
+- React Native >= 0.60.0
+- Android API level 24+ (Android 7.0+)
+- Java 17+
+- Paired WearOS device
+
+## Quick Start
+
+```typescript
+import {
+  installWatchface,
+  getConnectedDevices,
+  isAppInstalledOnWatch,
+  sendMessageToWatch,
+} from '@haykmkrtich/react-native-patriot-native';
+
+// Get all connected devices
+const devices = await getConnectedDevices();
+console.log(devices);
+// [{ id: "node_123", displayName: "Galaxy Watch 4", isNearby: true, type: "watch", platform: "wearOS" }]
+
+// Install a watch face
+await installWatchface('com.example.watchface.package');
+
+// Check if an app is installed on the watch
+const status = await isAppInstalledOnWatch('com.example.watchface');
+// { isInstalled: true, installedOnNodes: ["node_123"] }
+
+// Send a custom message to a specific watch
+await sendMessageToWatch(devices[0].id, '/my-path', 'hello');
+```
+
+## API Reference
+
+### `getConnectedDevices(): Promise<ConnectedDevice[]>`
+
+Returns all connected WearOS devices with full details. Returns an empty array if no devices are connected.
+
+```typescript
+interface ConnectedDevice {
+  id: string;           // Unique device identifier
+  displayName: string;  // Human-readable device name
+  isNearby: boolean;    // Device proximity status
+  type: string;         // Device type (e.g., "watch")
+  platform: string;     // Platform ("wearOS" | "unknown")
+}
+```
+
+**Example:**
+```typescript
+const devices = await getConnectedDevices();
+
+if (devices.length === 0) {
+  console.log('No watches connected');
+} else {
+  devices.forEach(device => {
+    console.log(`${device.displayName} (${device.platform}) - ${device.isNearby ? 'Nearby' : 'Away'}`);
+  });
+}
+```
+
+**Error Codes:**
+- `DETECTION_FAILED` — Failed to communicate with WearOS API
+
+---
+
+### `installWatchface(packageName: string): Promise<void>`
+
+Initiates watch face installation on all connected WearOS devices.
+
+**Parameters:**
+- `packageName` — The Google Play package name of the watch face to install
+
+**Example:**
 ```typescript
 try {
-  await installWatchface('com.example.watchface.package');
-  // ✅ Installation initiated successfully
+  await installWatchface('com.awesome.watchface');
+  // User will see a toast and installation prompt on their watch
 } catch (error) {
-  // ❌ Handle installation errors
-}
-```
-
-**Errors:**
-- `NO_NODES` - No connected WearOS device
-- `INSTALL_FAILED` - Installation process failed
-
-### `getConnectedWatchProperties()`
-
-Retrieves detailed information about connected wearable devices.
-
-```typescript
-interface WatchProperties {
-  id: string;                    // Unique device identifier
-  displayName: string;           // Human-readable device name  
-  isNearby: boolean;            // Device proximity status
-  type: string;                 // Device type (e.g., "watch")
-  platform: string;            // Platform ("wearOS" | "fitbit")
-  isDisconnected?: boolean;     // No device connected
-}
-```
-
-**Example Response:**
-```typescript
-// ✅ Connected Device
-{
-  id: "node_12345_abcdef",
-  displayName: "Galaxy Watch 4", 
-  isNearby: true,
-  type: "watch",
-  platform: "wearOS"
-}
-
-// ❌ No Device
-{ isDisconnected: true }
-```
-
-## 🔧 Setup Requirements
-
-### Android Dependencies
-
-Add to your `android/app/build.gradle`:
-
-```gradle
-dependencies {
-    implementation 'com.google.android.gms:play-services-wearable:18.1.0'
-    implementation 'androidx.wear:wear-remote-interactions:1.0.0'
-}
-```
-
-### WearOS Development Best Practices
-
-> ⚠️ **Important**: For Google Play Console compliance, create **two applications** with identical package names:
-> - 📱 Mobile companion app (React Native)
-> - ⌚ WearOS watch face app
-
-This ensures proper functionality and distribution through Google Play Store.
-
-## 🛠️ How It Works
-
-```mermaid
-graph LR
-    A[Mobile App] --> B[WearOS Remote API]
-    B --> C[Connected Watch]
-    C --> D[Google Play Store]
-    D --> E[Watch Face Installation]
-```
-
-1. **Device Discovery** - Scan for connected WearOS devices
-2. **Remote Installation** - Send installation request to watch
-3. **Play Store Integration** - Open watch face listing on device
-4. **User Confirmation** - User confirms installation on watch
-
-## 💡 Usage Examples
-
-### Basic Installation
-```typescript
-import { installWatchface } from '@haykmkrtich/react-native-patriot-native';
-
-const handleInstall = async (packageName: string) => {
-  try {
-    await installWatchface(packageName);
-    console.log('✅ Check your watch for installation prompt');
-  } catch (error) {
-    console.error('❌ Installation failed:', error.message);
+  if (error.code === 'NO_NODES') {
+    console.log('No watch connected');
   }
-};
+}
 ```
 
-### Device Information
+**Error Codes:**
+- `NO_NODES` — No connected WearOS device found
+- `INSTALL_FAILED` — Installation request failed
+
+---
+
+### `isAppInstalledOnWatch(packageName: string): Promise<AppInstallStatus>`
+
+Checks if a specific app or capability is available on connected watches.
+
 ```typescript
-import { getConnectedWatchProperties } from '@haykmkrtich/react-native-patriot-native';
-
-const checkWatchStatus = async () => {
-  try {
-    const watch = await getConnectedWatchProperties();
-    
-    if (watch.isDisconnected) {
-      return '❌ No watch connected';
-    }
-    
-    return `✅ ${watch.displayName} (${watch.platform}) - ${watch.isNearby ? 'Nearby' : 'Away'}`;
-  } catch (error) {
-    return `❌ Detection failed: ${error.message}`;
-  }
-};
+interface AppInstallStatus {
+  isInstalled: boolean;     // Whether the app is found on any watch
+  installedOnNodes: string[]; // IDs of watches that have the app
+}
 ```
 
-## 🤝 Contributing
+**Example:**
+```typescript
+const status = await isAppInstalledOnWatch('com.example.watchface');
+if (status.isInstalled) {
+  console.log(`Installed on ${status.installedOnNodes.length} device(s)`);
+}
+```
 
-Contributions are welcome! Please read our [contributing guidelines](CONTRIBUTING.md) before submitting PRs.
+**Error Codes:**
+- `CHECK_FAILED` — Failed to query capabilities
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+---
 
-## 📄 License
+### `sendMessageToWatch(nodeId: string, path: string, data?: string): Promise<void>`
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+Sends a custom message to a specific watch node. Use `getConnectedDevices()` first to get the node ID.
 
-## 👨‍💻 Author
+**Parameters:**
+- `nodeId` — Target device ID (from `getConnectedDevices()`)
+- `path` — Message path (e.g., `/my-action`)
+- `data` — Optional string payload (defaults to empty string)
+
+**Example:**
+```typescript
+const devices = await getConnectedDevices();
+if (devices.length > 0) {
+  await sendMessageToWatch(devices[0].id, '/sync-settings', JSON.stringify({ theme: 'dark' }));
+}
+```
+
+**Error Codes:**
+- `MESSAGE_FAILED` — Failed to send message
+
+---
+
+### `getConnectedWatchProperties(): Promise<ConnectedDevice>` *(deprecated)*
+
+Returns the first connected device. Use `getConnectedDevices()` instead.
+
+## WearOS Development Best Practices
+
+This module is designed for WearOS watch face companion apps. For Google Play Console compliance:
+
+1. Create **two applications** with identical package names:
+   - Mobile companion app (React Native, using this module)
+   - WearOS watch face app
+2. This package name consistency is required for proper functionality and distribution through Google Play Store.
+
+## How It Works
+
+1. **Device Discovery** — Scan for connected WearOS devices via NodeClient
+2. **Remote Installation** — Send installation request to connected watches
+3. **Play Store Integration** — Opens the watch face listing on the watch's Play Store
+4. **User Confirmation** — User confirms installation on their watch
+
+## Changelog
+
+### 1.1.0
+- **New:** `getConnectedDevices()` — returns all connected devices with full details (replaces `getConnectedWatchProperties`)
+- **New:** `isAppInstalledOnWatch(packageName)` — check if an app is installed on connected watches
+- **New:** `sendMessageToWatch(nodeId, path, data)` — send custom messages to specific watch nodes
+- **Deprecated:** `getConnectedWatchProperties()` — use `getConnectedDevices()` instead
+- **Fixed:** "No matching variant" build error on React Native 0.78+ / AGP 8.11+
+  - Added `publishing` block for AGP 8.11+ compatibility
+  - Updated `compileSdk`/`targetSdk` to 35
+  - Java 17 compatibility
+- **Fixed:** Duplicate class errors from broken newarch/oldarch stubs — both now have full implementations
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+## License
+
+MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Author
 
 **Hayk Mkrtich**
 - GitHub: [@HaykMkrtich](https://github.com/HaykMkrtich)
 - NPM: [@haykmkrtich](https://www.npmjs.com/~haykmkrtich)
 
-## 🆘 Support
+## Support
 
-- 🐛 **Bug Reports**: [Create an issue](https://github.com/HaykMkrtich/react-native-patriot-native/issues/new?template=bug_report.md)
-- 💡 **Feature Requests**: [Request a feature](https://github.com/HaykMkrtich/react-native-patriot-native/issues/new?template=feature_request.md)
-- 📖 **Documentation**: [View full docs](https://github.com/HaykMkrtich/react-native-patriot-native/wiki)
-
----
-
-<div align="center">
-
-**⭐ Star this repository if it helped you!**
-
-Made with ❤️ for the React Native community
-
-</div>
+- [Report Issues](https://github.com/HaykMkrtich/react-native-patriot-native/issues)
+- [Feature Requests](https://github.com/HaykMkrtich/react-native-patriot-native/issues)

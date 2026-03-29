@@ -1,95 +1,122 @@
 # React Native Patriot Native
 
-🎯 Seamlessly install WearOS watch faces from your React Native mobile app!
-
-## Package Structure for WearOS Development
-
-This module is a critical component for WearOS watch face companion apps. When publishing your complete wearable solution:
-
-⚠️ **Important:** Your Google Play Console setup must include:
-- A WearOS watch face app
-- A mobile companion app (using this module)
-- **Both apps must share the same package name**
-
-This package name consistency ensures:
-- Proper communication between companion app and watch face
-- Correct app discovery and installation flow
-- Smooth user experience during watch face installation
+Seamlessly install WearOS watch faces, detect devices, and communicate with connected watches from your React Native mobile app.
 
 ## Why React Native Patriot Native?
 
-Installing watch faces on WearOS devices traditionally requires users to navigate through their watch's Play Store. This module simplifies the process by allowing users to trigger watch face installations directly from your React Native mobile app.
+Installing watch faces on WearOS traditionally requires users to navigate through their watch's Play Store. This module simplifies the process by allowing direct interaction with WearOS devices from your React Native app.
 
 ## Quick Start
 
-1. Install the package:
 ```bash
 npm install @haykmkrtich/react-native-patriot-native
 ```
 
-2. Import and use:
 ```typescript
-import { installWatchface } from '@haykmkrtich/react-native-patriot-native';
+import {
+  installWatchface,
+  getConnectedDevices,
+  isAppInstalledOnWatch,
+  sendMessageToWatch,
+} from '@haykmkrtich/react-native-patriot-native';
 
-// Inside your component or function
-const installMyWatchface = async () => {
-  try {
-    await installWatchface('com.your.watchface.package');
-    // Success! Check your watch for the installation prompt
-  } catch (error) {
-    // Handle any errors
-    console.error(error);
-  }
-};
+// Get all connected WearOS devices
+const devices = await getConnectedDevices();
+// [{ id: "node_123", displayName: "Galaxy Watch 4", isNearby: true, type: "watch", platform: "wearOS" }]
+
+// Install a watch face
+await installWatchface('com.example.watchface.package');
+
+// Check if an app is installed on the watch
+const status = await isAppInstalledOnWatch('com.example.watchface');
+// { isInstalled: true, installedOnNodes: ["node_123"] }
+
+// Send a custom message to a specific watch
+await sendMessageToWatch(devices[0].id, '/my-path', 'hello');
 ```
 
-## Examples
+## API
 
-### Basic Usage
+### `getConnectedDevices()`
+Returns all connected WearOS devices with details: `id`, `displayName`, `isNearby`, `type`, `platform`.
+
+### `installWatchface(packageName)`
+Installs a watch face on all connected WearOS devices via Google Play.
+
+### `isAppInstalledOnWatch(packageName)`
+Checks if a specific app/capability is installed on connected watches. Returns `{ isInstalled, installedOnNodes }`.
+
+### `sendMessageToWatch(nodeId, path, data?)`
+Sends a custom message to a specific watch node.
+
+## Requirements
+
+- React Native >= 0.60.0
+- Android API level 24+ (Android 7.0+)
+- Java 17+
+- Paired WearOS device
+
+## Package Structure for WearOS Development
+
+**Important:** Your Google Play Console setup must include:
+- A WearOS watch face app
+- A mobile companion app (using this module)
+- **Both apps must share the same package name**
+
+This ensures proper communication and correct app discovery during installation.
+
+## Usage Examples
+
+### Device Detection
 ```typescript
-import { installWatchface } from '@haykmkrtich/react-native-patriot-native';
+const devices = await getConnectedDevices();
 
-// Inside a React component
-const WatchfaceInstaller = () => {
-  const handleInstall = async () => {
-    try {
-      await installWatchface('com.awesome.watchface');
-      // Installation request sent successfully
-    } catch (error) {
-      if (error.code === 'NO_NODES') {
-        // No WearOS device connected
-        Alert.alert('Please connect your WearOS device');
-      } else {
-        // Other installation errors
-        Alert.alert('Installation failed', error.message);
-      }
-    }
-  };
+if (devices.length === 0) {
+  Alert.alert('No watch connected');
+  return;
+}
 
-  return (
-    <Button 
-      title="Install Watchface" 
-      onPress={handleInstall} 
-    />
-  );
-};
+devices.forEach(device => {
+  console.log(`${device.displayName} (${device.platform}) - ${device.isNearby ? 'Nearby' : 'Away'}`);
+});
 ```
 
-### Error Handling
+### Watch Face Installation with Error Handling
 ```typescript
 try {
-  await installWatchface('com.example.watchface');
+  await installWatchface('com.awesome.watchface');
+  // Success — check your watch for the installation prompt
 } catch (error) {
   switch (error.code) {
     case 'NO_NODES':
-      console.log('No WearOS device connected');
+      Alert.alert('Please connect your WearOS device');
       break;
     case 'INSTALL_FAILED':
-      console.log('Installation failed:', error.message);
+      Alert.alert('Installation failed', error.message);
       break;
-    default:
-      console.log('Unknown error:', error);
   }
+}
+```
+
+### Check App Installation
+```typescript
+const status = await isAppInstalledOnWatch('com.example.watchface');
+if (status.isInstalled) {
+  console.log(`Found on ${status.installedOnNodes.length} device(s)`);
+} else {
+  console.log('Not installed on any connected watch');
+}
+```
+
+### Custom Messaging
+```typescript
+const devices = await getConnectedDevices();
+if (devices.length > 0) {
+  await sendMessageToWatch(
+    devices[0].id,
+    '/sync-settings',
+    JSON.stringify({ theme: 'dark' })
+  );
 }
 ```
 
@@ -99,16 +126,10 @@ try {
 - Companion apps for WearOS watch faces
 - Apps that offer multiple watch face styles
 - Enterprise apps managing company-wide watch face deployment
-
-## Tips and Best Practices
-
-1. Always check for errors and provide user feedback
-2. Ensure the watch face package exists on Google Play
-3. Verify WearOS device connection before attempting installation
-4. Consider implementing a retry mechanism
+- Apps that need to communicate with WearOS devices
 
 ## Need Help?
 
-- 📖 [Full Documentation](https://github.com/HaykMkrtich/react-native-patriot-native)
-- 🐛 [Report Issues](https://github.com/HaykMkrtich/react-native-patriot-native/issues)
-- 💡 [Feature Requests](https://github.com/HaykMkrtich/react-native-patriot-native/issues)
+- [Full Documentation](https://github.com/HaykMkrtich/react-native-patriot-native)
+- [Report Issues](https://github.com/HaykMkrtich/react-native-patriot-native/issues)
+- [Feature Requests](https://github.com/HaykMkrtich/react-native-patriot-native/issues)
