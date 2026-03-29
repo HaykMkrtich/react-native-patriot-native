@@ -6,6 +6,10 @@
 
 A React Native module that enables seamless interaction with WearOS devices — install watch faces, detect connected devices, check app installations, and send messages directly from your mobile app.
 
+## Why React Native Patriot Native?
+
+Installing watch faces on WearOS traditionally requires users to navigate through their watch's Play Store. This module simplifies the process by allowing direct interaction with WearOS devices from your React Native app — device detection, watch face installation, app status checks, and custom messaging all through a simple Promise-based API.
+
 ## Features
 
 | Feature | Description |
@@ -183,6 +187,14 @@ This module is designed for WearOS watch face companion apps. For Google Play Co
 2. **Remote Installation** — Send installation request to connected watches
 3. **Play Store Integration** — Opens the watch face listing on the watch's Play Store
 4. **User Confirmation** — User confirms installation on their watch
+
+## Common Use Cases
+
+- Watch face marketplace apps
+- Companion apps for WearOS watch faces
+- Apps that offer multiple watch face styles
+- Enterprise apps managing company-wide watch face deployment
+- Apps that need to communicate with WearOS devices
 
 ## Changelog
 

@@ -1,11 +1,12 @@
 {
   "name": "@haykmkrtich/react-native-patriot-native",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "main": "index.ts",
   "files": [
     "index.ts",
     "src/",
-    "android/"
+    "android/",
+    "README.md"
   ],
   "keywords": [
     "react-native",
