@@ -1,74 +1,149 @@
-
 package com.patriotnative;
 
-import android.content.Intent;
-import android.net.Uri;
-import android.os.Handler;
-import android.os.Looper;
+import android.content.Context;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.wear.remote.interactions.RemoteActivityHelper;
 
-import com.facebook.react.bridge.ReactApplicationContext;
-import com.facebook.react.bridge.ReactContextBaseJavaModule;
-import com.facebook.react.bridge.ReactMethod;
 import com.facebook.react.bridge.Promise;
+import com.facebook.react.bridge.ReactApplicationContext;
+import com.facebook.react.bridge.ReactMethod;
+import com.facebook.react.bridge.WritableMap;
+import com.facebook.react.bridge.WritableNativeMap;
 
+import com.google.android.gms.wearable.CapabilityClient;
+import com.google.android.gms.wearable.CapabilityInfo;
+import com.google.android.gms.wearable.Node;
+import com.google.android.gms.wearable.NodeClient;
+import com.google.android.gms.wearable.Wearable;
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
-import com.google.android.gms.wearable.Node;
-import com.google.android.gms.wearable.Wearable;
 
-import java.util.List;
-import java.util.concurrent.Executors;
+import java.util.Set;
+import java.util.concurrent.ExecutionException;
 
-public class PatriotNativeModule extends ReactContextBaseJavaModule {
+public class PatriotNativeModule extends NativePatriotNativeSpec {
+    private static final String NAME = "PatriotNative";
+    private static final String PLAY_STORE_APP_URI = "market://details?id=";
+
     private final ReactApplicationContext reactContext;
 
-    public PatriotNativeModule(ReactApplicationContext context) {
-        super(context);
-        this.reactContext = context;
+    public PatriotNativeModule(ReactApplicationContext reactContext) {
+        super(reactContext);
+        this.reactContext = reactContext;
     }
 
-    @NonNull
     @Override
+    @NonNull
     public String getName() {
-        return "PatriotNative";
+        return NAME;
     }
 
+    @Override
     @ReactMethod
     public void installWatchface(String packageName, Promise promise) {
-        new Thread(() -> {
-            try {
-                Task<List<Node>> nodeListTask = Wearable.getNodeClient(reactContext).getConnectedNodes();
-                List<Node> nodes = Tasks.await(nodeListTask);
-
-                if (nodes.isEmpty()) {
-                    showToast("Watch not connected");
-                    promise.reject("NO_NODES", "No connected WearOS device found.");
-                    return;
-                }
-
-                for (Node node : nodes) {
-                    Intent intent = new Intent(Intent.ACTION_VIEW);
-                    intent.addCategory(Intent.CATEGORY_BROWSABLE);
-                    intent.setData(Uri.parse("market://details?id=" + packageName));
-
-                    RemoteActivityHelper helper = new RemoteActivityHelper(reactContext, Executors.newSingleThreadExecutor());
-                    helper.startRemoteActivity(intent, node.getId());
-                }
-
-                showToast("Check your watch");
-                promise.resolve(null);
-            } catch (Exception e) {
-                promise.reject("INSTALL_FAILED", e.getMessage());
+        try {
+            Context context = getCurrentActivity();
+            if (context == null) {
+                context = getReactApplicationContext();
             }
-        }).start();
+
+            NodeClient nodeClient = Wearable.getNodeClient(context);
+            Task<Set<Node>> nodesTask = nodeClient.getConnectedNodes();
+
+            Set<Node> nodes = Tasks.await(nodesTask);
+
+            if (nodes.isEmpty()) {
+                promise.reject("NO_NODES", "No connected WearOS devices found");
+                return;
+            }
+
+            // Send installation request to connected nodes
+            String appUri = PLAY_STORE_APP_URI + packageName;
+            boolean installationSent = false;
+
+            for (Node node : nodes) {
+                try {
+                    Task<Integer> sendTask = Wearable.getMessageClient(context)
+                            .sendMessage(node.getId(), "/install_watchface", appUri.getBytes());
+                    Tasks.await(sendTask);
+                    installationSent = true;
+                } catch (Exception e) {
+                    // Continue to next node if this one fails
+                    continue;
+                }
+            }
+
+            if (installationSent) {
+                // Show user feedback
+                if (getCurrentActivity() != null) {
+                    getCurrentActivity().runOnUiThread(() ->
+                            Toast.makeText(context, "Check your watch for installation prompt", Toast.LENGTH_LONG).show()
+                    );
+                }
+                promise.resolve(null);
+            } else {
+                promise.reject("INSTALL_FAILED", "Failed to send installation request to any connected device");
+            }
+
+        } catch (ExecutionException | InterruptedException e) {
+            promise.reject("INSTALL_FAILED", "Failed to communicate with WearOS device: " + e.getMessage());
+        } catch (Exception e) {
+            promise.reject("INSTALL_FAILED", "Unexpected error: " + e.getMessage());
+        }
     }
 
-    private void showToast(String msg) {
-        new Handler(Looper.getMainLooper()).post(() ->
-                Toast.makeText(reactContext, msg, Toast.LENGTH_SHORT).show());
+    @Override
+    @ReactMethod
+    public void getConnectedWatchProperties(Promise promise) {
+        try {
+            Context context = getCurrentActivity();
+            if (context == null) {
+                context = getReactApplicationContext();
+            }
+
+            NodeClient nodeClient = Wearable.getNodeClient(context);
+            Task<Set<Node>> nodesTask = nodeClient.getConnectedNodes();
+
+            Set<Node> nodes = Tasks.await(nodesTask);
+
+            if (nodes.isEmpty()) {
+                WritableMap result = new WritableNativeMap();
+                result.putBoolean("isDisconnected", true);
+                promise.resolve(result);
+                return;
+            }
+
+            // Get the first connected node (primary watch)
+            Node firstNode = nodes.iterator().next();
+
+            WritableMap result = new WritableNativeMap();
+            result.putString("id", firstNode.getId());
+            result.putString("displayName", firstNode.getDisplayName());
+            result.putBoolean("isNearby", firstNode.isNearby());
+            result.putString("type", "watch");
+
+            // Detect platform based on capabilities
+            CapabilityClient capabilityClient = Wearable.getCapabilityClient(context);
+            try {
+                Task<CapabilityInfo> capabilityTask = capabilityClient.getCapability("wear_app_runtime", CapabilityClient.FILTER_REACHABLE);
+                CapabilityInfo capabilityInfo = Tasks.await(capabilityTask);
+
+                if (capabilityInfo.getNodes().size() > 0) {
+                    result.putString("platform", "wearOS");
+                } else {
+                    result.putString("platform", "unknown");
+                }
+            } catch (Exception e) {
+                result.putString("platform", "wearOS"); // Default assumption
+            }
+
+            promise.resolve(result);
+
+        } catch (ExecutionException | InterruptedException e) {
+            promise.reject("DETECTION_FAILED", "Failed to detect connected devices: " + e.getMessage());
+        } catch (Exception e) {
+            promise.reject("DETECTION_FAILED", "Unexpected error: " + e.getMessage());
+        }
     }
 }
