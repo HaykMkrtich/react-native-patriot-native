@@ -1,50 +1,39 @@
 apply plugin: 'com.android.library'
 apply plugin: 'com.facebook.react'
 
-// Поддержка новой архитектуры React Native
-def isNewArchitectureEnabled() {
-    return rootProject.hasProperty("newArchEnabled") && rootProject.getProperty("newArchEnabled") == "true"
-}
-
 android {
-    compileSdkVersion 34
+    compileSdk 35
     namespace "com.patriotnative"
 
     defaultConfig {
-        minSdkVersion 24 // Повышаем минимальную версию для поддержки новых возможностей
-        targetSdkVersion 34
+        minSdk 24
+        targetSdk 35
 
-        // Добавляем поддержка 16KB страниц
         ndk {
             abiFilters "arm64-v8a", "x86_64"
         }
     }
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17 // Обновляем до Java 17 для RN 0.77
+        sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
 
-    // Исправляем packagingOptions на packaging
     packaging {
         pickFirst "**/libc++_shared.so"
         pickFirst "**/libjsc.so"
     }
 
-    // Оптимизация для 16KB страниц
-    buildFeatures {
-        prefab true
-        buildConfig false
+    publishing {
+        singleVariant("release") {
+            withSourcesJar()
+        }
     }
 
-    // Поддержка новой архитектуры
     sourceSets {
         main {
-            if (isNewArchitectureEnabled()) {
-                java.srcDirs += [
-                    "src/newarch/java",
-                    "${project.buildDir}/generated/source/codegen/java"
-                ]
+            if (project.hasProperty("newArchEnabled") && project.property("newArchEnabled") == "true") {
+                java.srcDirs += ["src/newarch/java"]
             } else {
                 java.srcDirs += ["src/oldarch/java"]
             }
@@ -52,7 +41,6 @@ android {
     }
 }
 
-// Поддержка React Native Codegen
 react {
     libraryName = "PatriotNative"
     codegenJavaPackageName = "com.patriotnative"
@@ -63,9 +51,4 @@ dependencies {
     implementation 'androidx.annotation:annotation:1.7.0'
     implementation 'com.google.android.gms:play-services-wearable:18.2.0'
     implementation 'androidx.wear:wear-remote-interactions:1.0.0'
-
-    // Исправляем условие для новой архитектуры
-    if (isNewArchitectureEnabled()) {
-        implementation project(":ReactAndroid")  // Правильная зависимость для новой архитектуры
-    }
 }
